@@ -1,0 +1,67 @@
+name: CD pipeline
+
+on:
+  push:
+    branches: [main]
+    tags:
+      - 'v*'
+
+jobs:
+  deploy-staging:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Deploy to server
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            docker run --rm \
+              -e DATABASE_URL=${{ secrets.DATABASE_URL }} \
+              ${{ secrets.DOCKERHUB_USERNAME }}/notes-api:latest \
+              alembic upgrade head
+
+            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/notes-api:latest
+            docker stop notes-api-staging || true
+            docker rm notes-api-staging || true
+            
+            docker run -d \
+              --name notes-api-staging -p 8060:8000 \
+              -e DATABASE_URL=${{ secrets.DATABASE_URL }} \
+              ${{ secrets.DOCKERHUB_USERNAME }}/notes-api:latest
+            
+            sleep 10
+            curl -f http://localhost:8060/health
+
+  deploy-production:
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'ref/tags/')
+    environment:
+      name: production
+      url: ${{ secrets.PRODUCTION_URL }}
+    steps:
+      - name: Deploy to server
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            docker run --rm \
+              -e DATABASE_URL=${{ secrets.DATABASE_URL }} \
+              ${{ secrets.DOCKERHUB_USERNAME }}/notes-api:latest \
+              alembic upgrade head
+
+            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/notes-api:latest
+            docker stop notes-api-production || true
+            docker rm notes-api-production || true
+
+            docker run -d \
+              --name notes-api-production -p 8070:8000 \
+              -e DATABASE_URL=${{ secrets.DATABASE_URL }} \
+              ${{ secrets.DOCKERHUB_USERNAME }}/notes-api:${{ github.ref_name }}
+
+            sleep 10
+            curl -f http://localhost:8070/health
