@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 
-from app.database import Base, engine
+from app.database import get_db
 from app.routers import notes, users
 
 app = FastAPI(title="Notes API", version="1.0.0")
