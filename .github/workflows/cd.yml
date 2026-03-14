@@ -41,7 +41,6 @@ jobs:
     if: startsWith(github.ref, 'ref/tags/')
     environment:
       name: production
-      url: ${{ secrets.PRODUCTION_URL }}
     steps:
       - name: Deploy to server
         uses: appleboy/ssh-action@v1
