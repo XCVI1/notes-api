@@ -1,32 +1,29 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
-from app.database import get_db
+
 from app import models, schemas
-from app.auth import get_password_hash, verify_password, create_access_token
+from app.auth import create_access_token, get_password_hash, verify_password
+from app.database import get_db
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.post("/register", response_model=schemas.UserResponse, status_code=201)
 def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
-    db_user = db.query(models.User).filter(
-        models.User.username == user.username
-    ).first()
+    db_user = (
+        db.query(models.User).filter(models.User.username == user.username).first()
+    )
     if db_user:
         raise HTTPException(status_code=400, detail="Username already exists")
 
-    db_user = db.query(models.User).filter(
-        models.User.email == user.email
-    ).first()
+    db_user = db.query(models.User).filter(models.User.email == user.email).first()
     if db_user:
         raise HTTPException(status_code=400, detail="Email already exists")
 
     hashed_password = get_password_hash(user.password)
     db_user = models.User(
-        username=user.username,
-        email=user.email,
-        hashed_password=hashed_password
+        username=user.username, email=user.email, hashed_password=hashed_password
     )
     db.add(db_user)
     db.commit()
@@ -36,16 +33,15 @@ def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
 
 @router.post("/login", response_model=schemas.Token)
 def login(
-    form_data: OAuth2PasswordRequestForm = Depends(),
-    db: Session = Depends(get_db)
+    form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)
 ):
-    user = db.query(models.User).filter(
-        models.User.username == form_data.username
-    ).first()
+    user = (
+        db.query(models.User).filter(models.User.username == form_data.username).first()
+    )
     if not user or not verify_password(form_data.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password"
+            detail="Incorrect username or password",
         )
     access_token = create_access_token(data={"sub": user.username})
     return {"access_token": access_token, "token_type": "bearer"}

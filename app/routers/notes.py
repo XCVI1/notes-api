@@ -1,9 +1,11 @@
+from typing import List
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from typing import List
-from app.database import get_db
+
 from app import models, schemas
 from app.auth import get_current_user
+from app.database import get_db
 
 router = APIRouter(prefix="/notes", tags=["notes"])
 
@@ -15,19 +17,16 @@ def get_public_notes(db: Session = Depends(get_db)):
 
 @router.get("/", response_model=List[schemas.NoteResponse])
 def get_my_notes(
-    db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user)
+    db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)
 ):
-    return db.query(models.Note).filter(
-        models.Note.owner_id == current_user.id
-    ).all()
+    return db.query(models.Note).filter(models.Note.owner_id == current_user.id).all()
 
 
 @router.post("/", response_model=schemas.NoteResponse, status_code=201)
 def create_note(
     note: schemas.NoteCreate,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user)
+    current_user: models.User = Depends(get_current_user),
 ):
     db_note = models.Note(**note.model_dump(), owner_id=current_user.id)
     db.add(db_note)
@@ -40,7 +39,7 @@ def create_note(
 def get_note(
     note_id: int,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user)
+    current_user: models.User = Depends(get_current_user),
 ):
     note = db.query(models.Note).filter(models.Note.id == note_id).first()
     if not note:
@@ -55,7 +54,7 @@ def update_note(
     note_id: int,
     note_update: schemas.NoteUpdate,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user)
+    current_user: models.User = Depends(get_current_user),
 ):
     note = db.query(models.Note).filter(models.Note.id == note_id).first()
     if not note:
@@ -74,7 +73,7 @@ def update_note(
 def delete_note(
     note_id: int,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user)
+    current_user: models.User = Depends(get_current_user),
 ):
     note = db.query(models.Note).filter(models.Note.id == note_id).first()
     if not note:

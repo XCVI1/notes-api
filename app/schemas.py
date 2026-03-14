@@ -1,11 +1,14 @@
-from typing import Optional
 from datetime import datetime
+from typing import Optional
+
 from pydantic import BaseModel, ConfigDict
+
 
 class UserCreate(BaseModel):
     username: str
     email: str
     password: str
+
 
 class UserResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -14,6 +17,7 @@ class UserResponse(BaseModel):
     email: str
     is_active: bool
     created_at: datetime
+
 
 class NoteCreate(BaseModel):
     title: str
@@ -26,6 +30,7 @@ class NoteUpdate(BaseModel):
     content: Optional[str] = None
     is_public: Optional[bool] = None
 
+
 class NoteResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     model_config = ConfigDict(from_attributes=True)
@@ -36,6 +41,7 @@ class NoteResponse(BaseModel):
     created_at: datetime
     updated_at: Optional[datetime] = None
     owner_id: int
+
 
 class Token(BaseModel):
     access_token: str
