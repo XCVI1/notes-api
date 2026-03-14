@@ -28,6 +28,7 @@ jobs:
             docker rm notes-api-staging || true
             
             docker run -d \
+              --network web_app_default \
               --name notes-api-staging -p 8060:8000 \
               -e DATABASE_URL=${{ secrets.DATABASE_URL }} \
               ${{ secrets.DOCKERHUB_USERNAME }}/notes-api:latest
@@ -59,6 +60,7 @@ jobs:
             docker rm notes-api-production || true
 
             docker run -d \
+              --network web_app_default \
               --name notes-api-production -p 8070:8000 \
               -e DATABASE_URL=${{ secrets.DATABASE_URL }} \
               ${{ secrets.DOCKERHUB_USERNAME }}/notes-api:${{ github.ref_name }}
