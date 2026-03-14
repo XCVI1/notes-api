@@ -18,6 +18,7 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
+            docker login -u ${{ secrets.DOCKERHUB_USERNAME }} -p ${{ secrets.DOCKERHUB_TOKEN }}
             docker run --rm \
               -e DATABASE_URL=${{ secrets.DATABASE_URL }} \
               ${{ secrets.DOCKERHUB_USERNAME }}/notes-api:latest \
@@ -49,6 +50,7 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
+            docker login -u ${{ secrets.DOCKERHUB_USERNAME }} -p ${{ secrets.DOCKERHUB_TOKEN }}
             docker run --rm \
               -e DATABASE_URL=${{ secrets.DATABASE_URL }} \
               ${{ secrets.DOCKERHUB_USERNAME }}/notes-api:latest \
