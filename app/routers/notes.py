@@ -12,7 +12,7 @@ router = APIRouter(prefix="/notes", tags=["notes"])
 
 @router.get("/public", response_model=List[schemas.NoteResponse])
 def get_public_notes(db: Session = Depends(get_db)):
-    return db.query(models.Note).filter(models.Note.is_public == True).all()
+    return db.query(models.Note).filter(models.Note.is_public.is_(True)).all()
 
 
 @router.get("/", response_model=List[schemas.NoteResponse])
