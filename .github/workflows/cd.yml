@@ -13,6 +13,19 @@ jobs:
       github.event.workflow_run.conclusion == 'success' &&
       github.event.workflow_run.head_branch == 'main'
     steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Copy files to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "docker-compose.prod.yml,nginx/,certbot/"
+          target: "~/web_app"
+
       - name: Deploy to server
         uses: appleboy/ssh-action@v1
         with:
@@ -20,26 +33,16 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            docker network create web_app_default || true
+            mkdir -p ~/web_app/nginx ~/web_app/certbot
+            cd ~/web_app
+            echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" > .env
             docker login -u ${{ secrets.DOCKERHUB_USERNAME }} -p ${{ secrets.DOCKERHUB_TOKEN }}
-            docker run --rm \
-              -e DATABASE_URL=${{ secrets.DATABASE_URL }} \
-              ${{ secrets.DOCKERHUB_USERNAME }}/notes-api:latest \
-              alembic upgrade head
-
-            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/notes-api:latest
-            docker stop notes-api-staging || true
-            docker rm notes-api-staging || true
-            
-            docker run -d \
-              --network web_app_default \
-              --name notes-api-staging -p 8060:8000 \
-              -e DATABASE_URL=${{ secrets.DATABASE_URL }} \
-              ${{ secrets.DOCKERHUB_USERNAME }}/notes-api:latest
-            
+            docker compose -f docker-compose.prod.yml pull
+            docker compose -f docker-compose.prod.yml run --rm api alembic upgrade head
+            docker compose -f docker-compose.prod.yml up -d --force-recreate
             sleep 10
-            curl -f http://localhost:8060/health
-
+            curl -f http://localhost/health
+  
   deploy-production:
     runs-on: ubuntu-latest
     if: |
@@ -48,6 +51,19 @@ jobs:
     environment:
       name: production
     steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Copy files to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "docker-compose.prod.yml,nginx/,certbot/"
+          target: "~/web_app"
+
       - name: Deploy to server
         uses: appleboy/ssh-action@v1
         with:
@@ -55,23 +71,12 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            docker network create web_app_default || true
+            mkdir -p ~/web_app/nginx ~/web_app/certbot
+            cd ~/web_app
+            echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" > .env
             docker login -u ${{ secrets.DOCKERHUB_USERNAME }} -p ${{ secrets.DOCKERHUB_TOKEN }}
-            
-            docker run --rm \
-              --network web_app_default \
-              -e DATABASE_URL=${{ secrets.DATABASE_URL }} \
-              ${{ secrets.DOCKERHUB_USERNAME }}/notes-api:latest \
-              alembic upgrade head
-            
-            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/notes-api:latest
-            docker stop notes-api-production || true
-            docker rm notes-api-production || true
-            
-            docker run -d \
-              --network web_app_default \
-              --name notes-api-production -p 8070:8000 \
-              -e DATABASE_URL=${{ secrets.DATABASE_URL }} \
-              ${{ secrets.DOCKERHUB_USERNAME }}/notes-api:latest
+            docker compose -f docker-compose.prod.yml pull
+            docker compose -f docker-compose.prod.yml run --rm api alembic upgrade head
+            docker compose -f docker-compose.prod.yml up -d --force-recreate
             sleep 10
-            curl -f http://localhost:8070/health
+            curl -f http://localhost/health
