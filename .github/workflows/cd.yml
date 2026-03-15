@@ -37,12 +37,25 @@ jobs:
             cd ~/web_app
             echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" > .env
             docker login -u ${{ secrets.DOCKERHUB_USERNAME }} -p ${{ secrets.DOCKERHUB_TOKEN }}
+
+            PREVIOUS=$(docker inspect notes-api --format='{{.Config.Image}}' 2>/dev/null || echo "")
+
             docker compose -f docker-compose.prod.yml pull
             docker compose -f docker-compose.prod.yml run --rm api alembic upgrade head
             docker compose -f docker-compose.prod.yml up -d --force-recreate
             sleep 10
-            curl -f http://localhost/health
-  
+            if ! curl -f http://localhost/health; then
+              echo "Healthcheck failed, rolling back"
+              docker stop notes-api || true
+              docker rm notes-api || true
+              docker run -d \
+                --name notes-api \
+                --network web_app_app-net \
+                -e DATABASE_URL=${{ secrets.DATABASE_URL }} \
+                $PREVIOUS
+              exit 1
+            fi
+
   deploy-production:
     runs-on: ubuntu-latest
     permissions:
@@ -77,11 +90,24 @@ jobs:
             cd ~/web_app
             echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" > .env
             docker login -u ${{ secrets.DOCKERHUB_USERNAME }} -p ${{ secrets.DOCKERHUB_TOKEN }}
+
+            PREVIOUS=$(docker inspect notes-api --format='{{.Config.Image}}' 2>/dev/null || echo "")
+
             docker compose -f docker-compose.prod.yml pull
             docker compose -f docker-compose.prod.yml run --rm api alembic upgrade head
             docker compose -f docker-compose.prod.yml up -d --force-recreate
             sleep 10
-            curl -f http://localhost/health
+            if ! curl -f http://localhost/health; then
+              echo "Healthcheck failed, rolling back"
+              docker stop notes-api || true
+              docker rm notes-api || true
+              docker run -d \
+                --name notes-api \
+                --network web_app_app-net \
+                -e DATABASE_URL=${{ secrets.DATABASE_URL }} \
+                $PREVIOUS
+              exit 1
+            fi
 
       - name: Create GitHub release
         uses: softprops/action-gh-release@v1
