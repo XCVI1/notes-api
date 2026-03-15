@@ -1,4 +1,4 @@
-FROM python:3.12 AS builder
+FROM python:3.14 AS builder
 
 WORKDIR /app
 
@@ -6,7 +6,7 @@ COPY requirements.txt .
 
 RUN pip install --user -r requirements.txt
 
-FROM python:3.12-slim AS runtime
+FROM python:3.14-slim AS runtime
 
 WORKDIR /app
 
