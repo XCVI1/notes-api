@@ -44,6 +44,14 @@ jobs:
           mkdir -p ~/.kube
           echo "${{ secrets.KUBECONFIG }}" > ~/.kube/config
 
+      - name: Create k8s secret
+        run: |
+          kubectl create secret generic api-secrets \
+            --from-literal=POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }} \
+            --from-literal=DATABASE_URL=${{ secrets.DATABASE_URL }} \
+            --from-literal=SECRET_KEY=${{ secrets.SECRET_KEY }} \
+            --dry-run=client -o yaml | kubectl apply -f -
+
       - name: Deploy to k3s
         run: |
           kubectl apply -f k8s/
@@ -90,6 +98,14 @@ jobs:
         run: |
           mkdir -p ~/.kube
           echo "${{ secrets.KUBECONFIG }}" > ~/.kube/config
+
+      - name: Create k8s secret
+        run: |
+          kubectl create secret generic api-secrets \
+            --from-literal=POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }} \
+            --from-literal=DATABASE_URL=${{ secrets.DATABASE_URL }} \
+            --from-literal=SECRET_KEY=${{ secrets.SECRET_KEY }} \
+            --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Deploy to k3s
         run: |
