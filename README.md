@@ -1,8 +1,8 @@
 # Notes API
-![CI](https://github.com/XCVI1/fastapi-todo-cicd/actions/workflows/ci.yml/badge.svg)
-![Version](https://img.shields.io/badge/version-v1.0-blue)
+![CI](https://github.com/XCVI1/notes-api/actions/workflows/ci.yml/badge.svg)
+![Version](https://img.shields.io/badge/version-v1.1.1-blue)
 
-A self-hosted REST API for managing notes, built with FastAPI and PostgreSQL. Includes full CI/CD pipeline with GitHub Actions.
+A self-hosted REST API for managing notes, built with FastAPI and PostgreSQL. Includes full CI/CD pipeline with GitHub Actions, Kubernetes deployment and HTTPS via Let's Encrypt.
 
 ## Features
 
@@ -11,6 +11,8 @@ A self-hosted REST API for managing notes, built with FastAPI and PostgreSQL. In
 - **Public/Private notes**: Control note visibility
 - **CI/CD**: Automated testing, security scanning, and deployment via GitHub Actions
 - **Multi-stage Docker build**: Optimized image size
+- **Kubernetes**: Deployed on k3s with Deployments, Services and Secrets
+- **HTTPS**: SSL certificate via Let's Encrypt and Nginx reverse proxy
 
 ---
 
@@ -27,7 +29,14 @@ A self-hosted REST API for managing notes, built with FastAPI and PostgreSQL. In
 │   └── routers/
 │       ├── notes.py         # Notes endpoints
 │       └── users.py         # Auth endpoints
+├── k8s/
+│   ├── api-deployment.yml   # API Deployment and Service
+│   ├── postgres-deployment.yml  # PostgreSQL Deployment and Service
+│   ├── configmap.yml        # Non-sensitive configuration
+│   └── ingress.yml          # Traefik Ingress
 ├── migrations/              # Alembic migrations
+├── nginx/
+│   └── nginx.conf           # Nginx reverse proxy config
 ├── tests/
 │   └── test_main.py         # API tests
 ├── .github/
@@ -36,6 +45,7 @@ A self-hosted REST API for managing notes, built with FastAPI and PostgreSQL. In
 │       └── cd.yml           # CD pipeline
 ├── Dockerfile               # Multi-stage build
 ├── docker-compose.yml       # Local development
+├── docker-compose.prod.yml  # Production deployment
 ├── alembic.ini              # Alembic configuration
 └── requirements.txt
 ```
@@ -61,6 +71,7 @@ python3 -c "import secrets; print(secrets.token_hex(32))"
 
 - Docker and Docker Compose
 - Python 3.11+
+- k3s (for Kubernetes deployment)
 
 ---
 
@@ -132,15 +143,18 @@ security (Trivy vulnerability scan)
 ### CD (runs after CI completes)
 ```
 deploy-staging (push to main)
-    └── alembic upgrade head
-    └── docker pull + restart
+    └── update nginx config
+    └── apply k8s manifests
+    └── kubectl rollout restart
     └── healthcheck
 
 deploy-production (git tag v*)
     └── requires manual approval
-    └── alembic upgrade head
-    └── docker pull + restart
+    └── update nginx config
+    └── apply k8s manifests
+    └── kubectl rollout restart
     └── healthcheck
+    └── create GitHub Release
 ```
 
 ### GitHub Secrets Required
@@ -153,6 +167,9 @@ deploy-production (git tag v*)
 | `SSH_USER` | SSH username |
 | `SSH_PRIVATE_KEY` | SSH private key |
 | `DATABASE_URL` | PostgreSQL connection string |
+| `POSTGRES_PASSWORD` | PostgreSQL password |
+| `SECRET_KEY` | JWT secret key |
+| `KUBECONFIG` | k3s kubeconfig file |
 
 ---
 
@@ -165,6 +182,8 @@ deploy-production (git tag v*)
 - [x] Docker Compose for local development
 - [x] CI/CD with GitHub Actions
 - [x] Security scanning with Trivy
-- [ ] Nginx reverse proxy
-- [ ] SSL certificate
-- [ ] k3s
+- [x] Nginx reverse proxy
+- [x] SSL certificate via Let's Encrypt
+- [x] Kubernetes deployment with k3s
+- [x] Automatic dependency updates via Dependabot
+- [x] GitHub Releases on production deploy
