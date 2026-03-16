@@ -24,6 +24,7 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
+            cd ~/web_app
             cat > ~/web_app/nginx/nginx.conf << 'EOF'
             events {
                 worker_connections 1024;
@@ -52,8 +53,12 @@ jobs:
                 }
             }
             EOF
-            cd ~/web_app
-            docker compose -f docker-compose.prod.yml restart nginx
+
+            if [ -f ~/web_app/certbot/conf/live/notes-api.duckdns.org/fullchain.pem ]; then
+              docker compose -f docker-compose.prod.yml restart nginx
+            else
+              echo "Certificates not found, skipping nginx restart"
+            fi
 
       - name: Set up kubectl
         uses: azure/setup-kubectl@v3
@@ -76,7 +81,7 @@ jobs:
           kubectl apply -f k8s/
           kubectl rollout restart deployment/api-deployment
           kubectl rollout status deployment/api-deployment --timeout=60s
-  
+
   deploy-production:
     runs-on: ubuntu-latest
     permissions:
@@ -98,6 +103,7 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
+            cd ~/web_app
             cat > ~/web_app/nginx/nginx.conf << 'EOF'
             events {
                 worker_connections 1024;
@@ -126,8 +132,12 @@ jobs:
                 }
             }
             EOF
-            cd ~/web_app
-            docker compose -f docker-compose.prod.yml restart nginx
+
+            if [ -f ~/web_app/certbot/conf/live/notes-api.duckdns.org/fullchain.pem ]; then
+              docker compose -f docker-compose.prod.yml restart nginx
+            else
+              echo "Certificates not found, skipping nginx restart"
+            fi
 
       - name: Set up kubectl
         uses: azure/setup-kubectl@v3
