@@ -1,6 +1,6 @@
 # Notes API
 ![CI](https://github.com/XCVI1/notes-api/actions/workflows/ci.yml/badge.svg)
-![Version](https://img.shields.io/badge/version-v1.1.1-blue)
+![Version](https://img.shields.io/github/v/release/XCVI1/notes-api)
 
 A self-hosted REST API for managing notes, built with FastAPI and PostgreSQL. Includes full CI/CD pipeline with GitHub Actions, Kubernetes deployment and HTTPS via Let's Encrypt.
 
