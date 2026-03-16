@@ -6,4 +6,5 @@ __pycache__/
 *.pyc
 .DS_Store
 migrations/versions/
-certbot/1
+certbot/
+k8s/secret.yml

@@ -17,45 +17,39 @@ jobs:
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
 
-      - name: Copy files to server
+      - name: Copy nginx config
         uses: appleboy/scp-action@v1.0.0
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "docker-compose.prod.yml,nginx/,certbot/"
+          source: "nginx/"
           target: "~/web_app"
 
-      - name: Deploy to server
+      - name: Restart nginx
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            mkdir -p ~/web_app/nginx ~/web_app/certbot
             cd ~/web_app
-            echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" > .env
-            docker login -u ${{ secrets.DOCKERHUB_USERNAME }} -p ${{ secrets.DOCKERHUB_TOKEN }}
+            docker compose -f docker-compose.prod.yml restart nginx
 
-            PREVIOUS=$(docker inspect notes-api --format='{{.Config.Image}}' 2>/dev/null || echo "")
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
 
-            docker compose -f docker-compose.prod.yml pull
-            docker compose -f docker-compose.prod.yml run --rm api alembic upgrade head
-            docker compose -f docker-compose.prod.yml up -d --force-recreate
-            sleep 10
-            if ! curl -f http://localhost/health; then
-              echo "Healthcheck failed, rolling back"
-              docker stop notes-api || true
-              docker rm notes-api || true
-              docker run -d \
-                --name notes-api \
-                --network web_app_app-net \
-                -e DATABASE_URL=${{ secrets.DATABASE_URL }} \
-                $PREVIOUS
-              exit 1
-            fi
+      - name: Configure kubeconfig
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG }}" > ~/.kube/config
 
+      - name: Deploy to k3s
+        run: |
+          kubectl apply -f k8s/
+          kubectl rollout restart deployment/api-deployment
+          kubectl rollout status deployment/api-deployment --timeout=60s
+  
   deploy-production:
     runs-on: ubuntu-latest
     permissions:
@@ -70,13 +64,13 @@ jobs:
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
 
-      - name: Copy files to server
+      - name: Copy nginx config
         uses: appleboy/scp-action@v1.0.0
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "docker-compose.prod.yml,nginx/,certbot/"
+          source: "nginx/"
           target: "~/web_app"
 
       - name: Deploy to server
@@ -86,28 +80,22 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            mkdir -p ~/web_app/nginx ~/web_app/certbot
             cd ~/web_app
-            echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" > .env
-            docker login -u ${{ secrets.DOCKERHUB_USERNAME }} -p ${{ secrets.DOCKERHUB_TOKEN }}
+            docker compose -f docker-compose.prod.yml restart nginx
 
-            PREVIOUS=$(docker inspect notes-api --format='{{.Config.Image}}' 2>/dev/null || echo "")
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
 
-            docker compose -f docker-compose.prod.yml pull
-            docker compose -f docker-compose.prod.yml run --rm api alembic upgrade head
-            docker compose -f docker-compose.prod.yml up -d --force-recreate
-            sleep 10
-            if ! curl -f http://localhost/health; then
-              echo "Healthcheck failed, rolling back"
-              docker stop notes-api || true
-              docker rm notes-api || true
-              docker run -d \
-                --name notes-api \
-                --network web_app_app-net \
-                -e DATABASE_URL=${{ secrets.DATABASE_URL }} \
-                $PREVIOUS
-              exit 1
-            fi
+      - name: Configure kubeconfig
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG }}" > ~/.kube/config
+
+      - name: Deploy to k3s
+        run: |
+          kubectl apply -f k8s/
+          kubectl rollout restart deployment/api-deployment
+          kubectl rollout status deployment/api-deployment --timeout=60s
 
       - name: Create GitHub release
         uses: softprops/action-gh-release@v1
