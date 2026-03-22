@@ -162,7 +162,7 @@ jobs:
           kubectl rollout status deployment/api-deployment --timeout=60s
 
       - name: Create GitHub release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.event.workflow_run.head_branch }}
           generate_release_notes: true
